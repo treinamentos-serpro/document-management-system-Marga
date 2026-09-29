@@ -7,15 +7,25 @@ import { listDocuments } from './services/documentService';
 export default function App() {
   const [owner, setOwner] = useState('usuario-local');
   const [documents, setDocuments] = useState([]);
-  const [error, setError] = useState('');
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(true);
+  const [documentsError, setDocumentsError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   async function refreshDocuments() {
+    setIsLoadingDocuments(true);
     try {
       setDocuments(await listDocuments());
-      setError('');
+      setDocumentsError('');
     } catch (requestError) {
-      setError(requestError.message);
+      setDocumentsError(requestError.message);
+    } finally {
+      setIsLoadingDocuments(false);
     }
+  }
+
+  async function handleUploaded() {
+    setActionError('');
+    await refreshDocuments();
   }
 
   useEffect(() => {
@@ -28,6 +38,7 @@ export default function App() {
         <span className="eyebrow">Arquivo local · DMS</span>
         <h1>Seus documentos, no lugar certo.</h1>
         <p className="intro">Envie, encontre e baixe arquivos com um fluxo direto e transparente.</p>
+        {actionError && <p className="notice" role="alert">{actionError}</p>}
 
         <section className="panel">
           <div className="toolbar">
@@ -40,13 +51,17 @@ export default function App() {
               <input id="owner" type="text" value={owner} onChange={(event) => setOwner(event.target.value)} />
             </div>
           </div>
-          <UploadComponent owner={owner} onUploaded={refreshDocuments} onError={setError} />
-          {error && <p className="notice" role="alert">{error}</p>}
+          <UploadComponent owner={owner} onUploaded={handleUploaded} onError={setActionError} />
         </section>
 
         <section className="panel">
           <h2>Documentos enviados</h2>
-          <DocumentList documents={documents} />
+          <DocumentList
+            documents={documents}
+            isLoading={isLoadingDocuments}
+            error={documentsError}
+            onDownloadError={setActionError}
+          />
         </section>
       </div>
     </main>

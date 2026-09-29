@@ -8,14 +8,22 @@ class DocumentRepository {
   }
 
   async saveFile(file, metadata) {
-    await fs.mkdir(this.storageDirectory, { recursive: true });
     const storedName = `${metadata.id}${path.extname(file.originalname)}`;
     const storedPath = path.join(this.storageDirectory, storedName);
-    await fs.rename(file.path, storedPath);
+    let fileMoved = false;
 
-    const document = { ...metadata, storedPath };
-    this.documents.set(metadata.id, document);
-    return this.toPublicMetadata(document);
+    try {
+      await fs.mkdir(this.storageDirectory, { recursive: true });
+      await fs.rename(file.path, storedPath);
+      fileMoved = true;
+
+      const document = { ...metadata, storedPath };
+      this.documents.set(metadata.id, document);
+      return this.toPublicMetadata(document);
+    } catch (error) {
+      await fs.rm(fileMoved ? storedPath : file.path, { force: true }).catch(() => {});
+      throw error;
+    }
   }
 
   list() {

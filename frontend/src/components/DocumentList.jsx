@@ -7,7 +7,15 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-export default function DocumentList({ documents }) {
+export default function DocumentList({ documents, isLoading, error, onDownloadError }) {
+  if (isLoading) {
+    return <p className="empty-state" role="status">Carregando documentos...</p>;
+  }
+
+  if (error) {
+    return <p className="notice" role="alert">{error}</p>;
+  }
+
   if (documents.length === 0) {
     return <p className="empty-state">Nenhum documento enviado ainda.</p>;
   }
@@ -20,7 +28,7 @@ export default function DocumentList({ documents }) {
             <strong>{document.originalName}</strong>
             <span>{document.owner} · {document.size.toLocaleString('pt-BR')} bytes · {formatDate(document.uploadedAt)}</span>
           </div>
-          <DownloadButton document={document} />
+          <DownloadButton document={document} onError={onDownloadError} />
         </article>
       ))}
     </div>

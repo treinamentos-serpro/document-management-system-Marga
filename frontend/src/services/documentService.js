@@ -33,6 +33,8 @@ export async function downloadDocument(id, originalName) {
   const link = document.createElement('a');
   link.href = url;
   link.download = originalName;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
