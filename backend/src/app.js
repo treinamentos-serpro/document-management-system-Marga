@@ -11,16 +11,42 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const multer = require('multer');
+
+const documentRoutes = require('./routes/documentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(documentRoutes);
 
 // Endpoint de verificação de saúde. As demais rotas (/upload, /documents,
 // /documents/:id/download) serão implementadas durante o Passo 2.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      error: 'FILE_TOO_LARGE',
+      message: 'O arquivo excede o tamanho máximo permitido.',
+    });
+  }
+
+  if (error.status) {
+    return res.status(error.status).json({
+      error: error.code || 'REQUEST_ERROR',
+      message: error.message,
+    });
+  }
+
+  console.error(error);
+  return res.status(500).json({
+    error: 'INTERNAL_ERROR',
+    message: 'Ocorreu um erro interno.',
+  });
 });
 
 if (require.main === module) {
