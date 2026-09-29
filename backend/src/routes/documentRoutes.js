@@ -6,6 +6,7 @@ const path = require('node:path');
 const DocumentController = require('../controllers/documentController');
 const DocumentRepository = require('../repositories/documentRepository');
 const DocumentService = require('../services/documentService');
+const { validateMimeType, validateOwner } = require('../services/documentPolicy');
 
 const storageDirectory = process.env.STORAGE_DIR || path.resolve(__dirname, '../../storage');
 const maxFileSize = Number(process.env.MAX_FILE_SIZE || 10 * 1024 * 1024);
@@ -34,13 +35,12 @@ const upload = multer({
     },
   }),
   fileFilter: (req, file, callback) => {
-    if (!allowedMimeTypes.has(file.mimetype)) {
-      const error = new Error('Tipo de arquivo não permitido.');
-      error.code = 'UNSUPPORTED_MEDIA_TYPE';
-      error.status = 415;
+    try {
+      validateMimeType(file.mimetype, allowedMimeTypes);
+      return callback(null, true);
+    } catch (error) {
       return callback(error);
     }
-    return callback(null, true);
   },
   limits: { fileSize: maxFileSize },
 });
@@ -50,14 +50,12 @@ const controller = new DocumentController(service);
 const router = express.Router();
 
 function requireOwner(req, res, next) {
-  const owner = req.get('X-User-Id');
-  if (!owner || !owner.trim()) {
-    return res.status(400).json({
-      error: 'VALIDATION_ERROR',
-      message: 'O header X-User-Id é obrigatório.',
-    });
+  try {
+    validateOwner(req.get('X-User-Id'));
+    return next();
+  } catch (error) {
+    return next(error);
   }
-  return next();
 }
 
 router.post('/upload', requireOwner, upload.single('file'), controller.upload);
